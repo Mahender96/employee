@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd">
+    <http:listener-config name="employee-data-api-httpListenerConfig">
+        <http:listener-connection host="localhost" port="8081" />
+    </http:listener-config>
+    <apikit:config name="employee-data-api-config" api="resource::63219c8c-ca45-44da-80fa-356ce64fb9de:employee-data-api:4.0.0:raml:zip:employee-data-api.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <salesforce:sfdc-config name="Salesforce_Config" doc:name="Salesforce Config" doc:id="deca5ebd-716b-4cd8-9b4d-679d33256507" >
+		<salesforce:basic-connection username="${sf.username}" password="${sf.password}" securityToken="RnaoB3eqQ3PURWk43dTVgOa0v" />
+	</salesforce:sfdc-config>
+	<salesforce:sfdc-config name="Salesforce_Config1" doc:name="Salesforce Config" doc:id="c38e6aca-6cdb-4fd1-b923-3d644dda0fe0" >
+		<salesforce:basic-connection username="vuradimahender@gmail.com" password="9701988047ma" securityToken="1GZT7SR8HH0QZVqGvcvcTvLnW" />
+	</salesforce:sfdc-config>
+	<flow name="employee-data-api-main">
+        <http:listener config-ref="employee-data-api-httpListenerConfig" path="/api/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:router config-ref="employee-data-api-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:BAD_REQUEST">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Bad request"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">400</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:METHOD_NOT_ALLOWED">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Method not allowed"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">405</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_ACCEPTABLE">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not acceptable"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">406</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:UNSUPPORTED_MEDIA_TYPE">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Unsupported media type"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">415</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_IMPLEMENTED">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not Implemented"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">501</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="put:\employees:application\json:employee-data-api-config">
+        <ee:transform doc:name="Transform Message" doc:id="fff2d2f7-a55a-4d70-969a-5575a519f108" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+payload map{
+	"employee_id__c" : $.employee_id,
+	"location__c" : $.employee_base_location,
+	"employee_name__c" : $.employee_name,
+	"dob__c" : $.dob
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<salesforce:upsert doc:name="Upsert" doc:id="e1e96d30-832e-4f30-842a-f9ac6ea81b6b" objectType="employee_c" externalIdFieldName="employee_id__c" config-ref="Salesforce_Config1"/>
+		<ee:transform>
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  message: "EMPLOYEE RECORDS ARE SUCCESFULLY"
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="delete:\employees:application\json:employee-data-api-config">
+        <ee:transform doc:name="Transform Message" doc:id="4b34a71c-ab79-43b5-a758-f8364f314534" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+((payload map{
+    "test" : "'" ++$.employee_id ++ "'"
+}).test)joinBy"'"]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<salesforce:query doc:name="Query" doc:id="cab03558-0584-4cb7-a43a-61b9afb88508" config-ref="Salesforce_Config">
+			<salesforce:salesforce-query ><![CDATA[SELECT Id FROM employee__c where employee_id__c in (:EIDS)]]></salesforce:salesforce-query>
+			<salesforce:parameters ><![CDATA[#[output application/java
+---
+{
+	EIDS : "'ET001','ET002'"
+}]]]></salesforce:parameters>
+		</salesforce:query>
+		<ee:transform doc:name="Transform Message" doc:id="e01bfa5b-84cd-4f0c-863c-9eb3aa099e6b" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<salesforce:delete doc:name="Delete" doc:id="35c2306e-6322-49fb-8542-907d7cc95b13" config-ref="Salesforce_Config">
+			<salesforce:ids ><![CDATA[#[[payload.Id]]]]></salesforce:ids>
+		</salesforce:delete>
+		<ee:transform>
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  message: "EMPLOYEE RECORDS ARE SUCCESFULLY"
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="get:\employees:employee-data-api-config">
+		<salesforce:query doc:name="Query" doc:id="55183d1c-38b4-49b1-8d90-b78124676ebd" config-ref="Salesforce_Config">
+			<salesforce:salesforce-query ><![CDATA[SELECT Id, employee_id__c,location__c,employee_name__c,dob__c FROM employee__c]]></salesforce:salesforce-query>
+		</salesforce:query>
+		<choice doc:name="Choice" doc:id="9294b87b-f942-4104-a919-2f79c6f0b5a7" >
+			<when expression="#[sizeOf(payload) !=0]">
+				<ee:transform doc:name="Transform Message" doc:id="90d5a8d7-edb9-4da7-9f7e-1b25476f088f">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload map{
+	"employee_id" : $.employee_id__c,
+	"employee_base_location" : $.location__c,
+	"employee_name" : $.employee_name__c,
+	"DOB" : $.dob__c
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="Transform Message" doc:id="f91f9ddb-318a-4558-b8d7-b979833a6cb0" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message":"no employees records"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+    </flow>
+    <flow name="get:\employees\(eid):application\json:employee-data-api-config">
+        <logger level="INFO" doc:name="UriParm Logger" doc:id="f5ebd497-32ba-4ce1-92bd-b36d55fa1eee" message="#[attributes.uriParams.eid]]"/>
+		<salesforce:query doc:name="Copy_of_Query" doc:id="2b340f90-10c7-474c-8410-72fee19ed930" config-ref="Salesforce_Config">
+			<salesforce:salesforce-query><![CDATA[SELECT Id, employee_id__c,location__c,employee_name__c,dob__c FROM employee__c where employee_id__c= ':EID']]></salesforce:salesforce-query>
+			<salesforce:parameters ><![CDATA[#[output application/java
+---
+{
+	EID : attributes.uriParams.eid
+}]]]></salesforce:parameters>
+		</salesforce:query>
+		<ee:transform doc:name="Transform Message" doc:id="9e429216-ef0c-47cf-b8cf-b61595a5e4e7" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload map{
+	"employee_id" : $.employee_id__c,
+	"employee_base_location" : $.location__c,
+	"employee_name" : $.employee_name__c,
+	"DOB" : $.dob__c
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+    </flow>
+</mule>
